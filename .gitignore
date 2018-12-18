@@ -24,3 +24,4 @@ fc_*.tar
 
 # Ignore environment variables
 .env
+.envrc
