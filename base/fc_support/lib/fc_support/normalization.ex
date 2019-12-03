@@ -5,6 +5,12 @@ defmodule FCSupport.Normalization do
     |> DateTime.to_iso8601()
   end
 
+  def from_utc_iso8601(nil), do: nil
+
+  def from_utc_iso8601(iso8601) do
+    Timex.parse!(iso8601, "{ISO:Extended}")
+  end
+
   def normalize_by(map, root_key, key, test_func, normalize_func) do
     value =
       map
@@ -60,7 +66,7 @@ defmodule FCSupport.Normalization do
 
   def atomize_keys(m, permitted \\ nil) do
     permitted_atom = permitted || Map.keys(m)
-    permitted_string = stringify_list(permitted)
+    permitted_string = stringify_list(permitted_atom)
 
     Enum.reduce(m, %{}, fn({k, v}, acc) ->
       cond do

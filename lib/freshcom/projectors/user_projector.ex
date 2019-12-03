@@ -5,12 +5,13 @@ defmodule Freshcom.UserProjector do
   use Commanded.Projections.Ecto, name: "projector:9708460c-a25a-4a14-b049-ea78af279746"
 
   alias Ecto.Changeset
-  alias Freshcom.Repo
   alias Freshcom.User
+
   alias FCIdentity.{
     UserRegistered,
     UserAdded,
     UserInfoUpdated,
+    DefaultAccountChanged,
     UserRoleChanged,
     PasswordResetTokenGenerated,
     PasswordChanged,
@@ -32,6 +33,15 @@ defmodule Freshcom.UserProjector do
       User
       |> Repo.get(event.user_id)
       |> Projection.changeset(event)
+
+    Multi.update(multi, :user, changeset)
+  end
+
+  project(%DefaultAccountChanged{} = event, _) do
+    changeset =
+      User
+      |> Repo.get(event.user_id)
+      |> Changeset.change(default_account_id: event.default_account_id)
 
     Multi.update(multi, :user, changeset)
   end
@@ -65,7 +75,7 @@ defmodule Freshcom.UserProjector do
         password_hash: event.new_password_hash,
         password_reset_token: nil,
         password_reset_token_expires_at: nil,
-        password_updated_at: metadata.created_at
+        password_changed_at: metadata.created_at
       )
 
     Multi.update(multi, :user, changeset)

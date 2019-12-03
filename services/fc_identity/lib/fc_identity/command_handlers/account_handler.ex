@@ -9,8 +9,8 @@ defmodule FCIdentity.AccountHandler do
   import FCIdentity.AccountPolicy
 
   alias FCIdentity.AccountHandleStore
-  alias FCIdentity.{CreateAccount, UpdateAccountInfo, AccountClosed}
-  alias FCIdentity.{AccountCreated, AccountInfoUpdated, CloseAccount}
+  alias FCIdentity.{CreateAccount, UpdateAccountInfo, ChangeAccountSystemLabel, AccountClosed}
+  alias FCIdentity.{AccountCreated, AccountInfoUpdated, AccountSystemLabelChanged, CloseAccount}
   alias FCIdentity.Account
 
   def handle(%Account{id: nil} = state, %CreateAccount{} = cmd) do
@@ -31,6 +31,14 @@ defmodule FCIdentity.AccountHandler do
     |> authorize(state)
     ~> keep_account_handle(state)
     ~> merge_to(%AccountInfoUpdated{})
+    ~> put_original_fields(state)
+    |> unwrap_ok()
+  end
+
+  def handle(%Account{id: _} = state, %ChangeAccountSystemLabel{} = cmd) do
+    cmd
+    |> authorize(state)
+    ~> merge_to(%AccountSystemLabelChanged{original_system_label: state.system_label})
     |> unwrap_ok()
   end
 
@@ -41,12 +49,13 @@ defmodule FCIdentity.AccountHandler do
   def handle(%Account{} = state, %CloseAccount{} = cmd) do
     cmd
     |> authorize(state)
+    ~> keep_account_handle(state)
     ~> merge_to(%AccountClosed{
-        owner_id: state.owner_id,
-        mode: state.mode,
-        test_account_id: state.test_account_id,
-        handle: state.handle
-      })
+      owner_id: state.owner_id,
+      mode: state.mode,
+      test_account_id: state.test_account_id,
+      handle: state.id
+    })
     |> unwrap_ok()
   end
 
@@ -60,6 +69,13 @@ defmodule FCIdentity.AccountHandler do
       AccountHandleStore.delete(state.handle)
       AccountHandleStore.put(cmd.handle, cmd.account_id)
     end
+
+    cmd
+  end
+
+  defp keep_account_handle(%CloseAccount{} = cmd, state) do
+    AccountHandleStore.delete(state.handle)
+    AccountHandleStore.put(state.id, cmd.account_id)
 
     cmd
   end

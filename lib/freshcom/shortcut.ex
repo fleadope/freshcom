@@ -4,11 +4,11 @@ defmodule Freshcom.Shortcut do
   def get_urt(account_id, user_id) do
     req = %Request{
       account_id: account_id,
-      identifiers: %{"user_id" => user_id},
+      identifier: %{"user_id" => user_id},
       _role_: "system"
     }
 
-    {:ok, %{data: urt}} = Identity.get_refresh_token(req)
+    {:ok, %{data: urt}} = Identity.get_api_key(req)
 
     urt
   end
@@ -16,11 +16,11 @@ defmodule Freshcom.Shortcut do
   def get_prt(account_id) do
     req = %Request{
       account_id: account_id,
-      identifiers: %{"user_id" => nil},
+      identifier: %{"user_id" => nil},
       _role_: "system"
     }
 
-    {:ok, %{data: prt}} = Identity.get_refresh_token(req)
+    {:ok, %{data: prt}} = Identity.get_api_key(req)
 
     prt
   end

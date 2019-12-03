@@ -4,15 +4,17 @@ defmodule FCIdentity.Account do
   use TypedStruct
   use FCBase, :aggregate
 
-  alias FCIdentity.{AccountCreated, AccountInfoUpdated, AccountClosed}
+  alias FCIdentity.{AccountCreated, AccountInfoUpdated, AccountSystemLabelChanged, AccountClosed}
+
+  @derive Jason.Encoder
 
   typedstruct do
     field :id, String.t()
 
-    field :status, String.t(), default: "active"
+    field :status, String.t()
     field :system_label, String.t()
     field :owner_id, String.t()
-    field :mode, String.t(), default: "live"
+    field :mode, String.t()
     field :live_account_id, String.t()
     field :test_account_id, String.t()
     field :default_locale, String.t()
@@ -26,8 +28,8 @@ defmodule FCIdentity.Account do
 
     field :caption, String.t()
     field :description, String.t()
-    field :custom_data, map, default: %{}
-    field :translations, map, default: %{}
+    field :custom_data, map
+    field :translations, map
   end
 
   def translatable_fields do
@@ -48,14 +50,17 @@ defmodule FCIdentity.Account do
     |> merge(event)
   end
 
-  def apply(%{} = state, %AccountInfoUpdated{locale: locale} = event) do
+  def apply(%{} = state, %AccountInfoUpdated{} = event) do
     state
     |> cast(event)
-    |> Translation.put_change(translatable_fields(), locale, state.default_locale)
     |> apply_changes()
   end
 
-  def apply(%{} = state, %AccountClosed{}) do
-    %{state | status: "deleted"}
+  def apply(%{} = state, %AccountSystemLabelChanged{} = event) do
+    %{state | system_label: event.system_label}
+  end
+
+  def apply(%{} = state, %AccountClosed{handle: handle}) do
+    %{state | status: "deleted", handle: handle}
   end
 end

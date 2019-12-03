@@ -4,7 +4,8 @@ defmodule FCIdentity.User do
   use TypedStruct
   use FCBase, :aggregate
 
-  alias FCStateStorage.GlobalStore.DefaultLocaleStore
+  @derive Jason.Encoder
+
   alias FCIdentity.{
     UserAdded,
     UserRegistered,
@@ -13,6 +14,7 @@ defmodule FCIdentity.User do
     PasswordChanged,
     UserRoleChanged,
     UserInfoUpdated,
+    DefaultAccountChanged,
     EmailVerificationTokenGenerated,
     EmailVerified
   }
@@ -37,12 +39,12 @@ defmodule FCIdentity.User do
     field :password_reset_token, String.t()
     field :password_reset_token_expires_at, DateTime.t()
 
-    field :email_verified, boolean, default: false
+    field :email_verified, boolean
     field :email_verification_token, String.t()
     field :email_verification_token_expires_at, DateTime.t()
 
-    field :custom_data, map, default: %{}
-    field :translations, map, default: %{}
+    field :custom_data, map
+    field :translations, map
   end
 
   def translatable_fields do
@@ -72,39 +74,33 @@ defmodule FCIdentity.User do
   def apply(state, %EmailVerificationTokenGenerated{} = event) do
     {:ok, datetime, 0} = DateTime.from_iso8601(event.expires_at)
 
-    %{state |
-      email_verified: false,
-      email_verification_token: event.token,
-      email_verification_token_expires_at: datetime
+    %{
+      state
+      | email_verified: false,
+        email_verification_token: event.token,
+        email_verification_token_expires_at: datetime
     }
   end
 
   def apply(state, %PasswordChanged{} = event) do
-    %{state |
-      password_hash: event.new_password_hash,
-      password_reset_token: nil,
-      password_reset_token_expires_at: nil
-    }
+    %{state | password_hash: event.new_password_hash, password_reset_token: nil, password_reset_token_expires_at: nil}
   end
 
   def apply(state, %UserRoleChanged{} = event) do
     %{state | role: event.role}
   end
 
-  def apply(state, %UserInfoUpdated{locale: locale} = event) do
-    default_locale = DefaultLocaleStore.get(state.account_id)
-
+  def apply(state, %UserInfoUpdated{} = event) do
     state
     |> cast(event)
-    |> Translation.put_change(translatable_fields(), locale, default_locale)
     |> apply_changes()
   end
 
+  def apply(state, %DefaultAccountChanged{default_account_id: account_id}) do
+    %{state | default_account_id: account_id}
+  end
+
   def apply(state, %EmailVerified{}) do
-    %{state |
-      email_verified: true,
-      email_verification_token: nil,
-      email_verification_token_expires_at: nil
-    }
+    %{state | email_verified: true, email_verification_token: nil, email_verification_token_expires_at: nil}
   end
 end

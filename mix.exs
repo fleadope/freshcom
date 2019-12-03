@@ -6,10 +6,12 @@ defmodule Freshcom.MixProject do
       app: :freshcom,
       version: "0.1.0",
       elixir: "~> 1.7",
-      elixirc_paths: elixirc_paths(Mix.env),
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      docs: docs(),
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -19,7 +21,8 @@ defmodule Freshcom.MixProject do
       mod: {Freshcom.Application, []},
       extra_applications: [:logger],
       included_applications: [
-        :fc_identity
+        :fc_identity,
+        :fc_goods
       ]
     ]
   end
@@ -32,13 +35,15 @@ defmodule Freshcom.MixProject do
     [
       {:fc_base, path: "base/fc_base"},
       {:fc_identity, path: "services/fc_identity"},
-      {:ecto, "~> 2.1"},
-      {:postgrex, "~> 0.13"},
-      {:commanded, "~> 0.17"},
-      {:commanded_ecto_projections, "~> 0.7"},
+      {:fc_goods, path: "services/fc_goods"},
+      {:ecto, "~> 3.0"},
+      {:commanded, "~> 0.18.0"},
+      {:commanded_ecto_projections, "~> 0.8.0"},
       {:inflex, "~> 1.10"},
+      {:decimal, "~> 1.6"},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
-      {:faker, "~> 0.11", only: [:test, :dev]}
+      {:faker, "~> 0.11", only: [:test, :dev]},
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 
@@ -50,6 +55,54 @@ defmodule Freshcom.MixProject do
       "event_store.reset": ["event_store.drop", "event_store.setup"],
       reset: ["ecto.reset", "event_store.reset"],
       test: ["ecto.create --quiet", "ecto.migrate", "test"]
+    ]
+  end
+
+  defp docs do
+    [
+      groups_for_modules: groups_for_modules(),
+      extra_section: "GUIDES",
+      extras: extras(),
+      groups_for_extras: groups_for_extras()
+    ]
+  end
+
+  defp groups_for_modules do
+    [
+      "API Modules": [
+        Freshcom.Identity
+      ],
+      "Request & Response": [
+        Freshcom.Request,
+        Freshcom.Response
+      ],
+      Projections: [
+        Freshcom.User,
+        Freshcom.App,
+        Freshcom.Account,
+        Freshcom.APIKey
+      ],
+      Core: [
+        Freshcom.APIModule,
+        Freshcom.Filter,
+        Freshcom.Fixture,
+        Freshcom.Include,
+        Freshcom.Projection,
+        Freshcom.Projector,
+        Freshcom.Shortcut
+      ]
+    ]
+  end
+
+  defp extras do
+    [
+      "guides/introduction/overview.md"
+    ]
+  end
+
+  defp groups_for_extras do
+    [
+      Introduction: ~r/guides\/introduction\/.?/
     ]
   end
 end

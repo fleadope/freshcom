@@ -2,6 +2,7 @@ defmodule Freshcom.Account do
   use Freshcom.Projection
 
   schema "accounts" do
+    field :status, :string
     field :prefixed_id, :string, virtual: true
     field :system_label, :string
     field :mode, :string
@@ -20,8 +21,8 @@ defmodule Freshcom.Account do
     field :caption, :string
     field :description, :string
 
-    field :custom_data, :map, default: %{}
-    field :translations, :map, default: %{}
+    field :custom_data, :map
+    field :translations, :map
 
     timestamps()
 

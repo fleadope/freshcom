@@ -1,121 +1,89 @@
 # Freshcom
 
+[![Build Status](https://travis-ci.org/freshcom/freshcom.svg?branch=master)](https://travis-ci.org/freshcom/freshcom)
+
 **Fast, scalable and extensible eCommerce backend in Elixir.**
 
-_Note: Freshcom does not include a web layer. Please see [Freshcom Web](https://github.com/freshcom/freshcom-api) if you need a web layer._
+Please see an overview of freshcom [here](https://github.com/freshcom/freshcom/blob/master/guides/introduction/overview.md).
 
-## Status of development
+## Getting Started
 
-Currently a work in progress.
+### External Dependencies
 
-Freshcom is a re-implementation of [Freshcom API](https://github.com/freshcom/freshcom-api) using CQRS/ES.
+Freshcom requires the following external dependencies to work:
 
-## Overview
+- Postgres for event store and projections
+- Redis for write side state storage
 
-### CQRS/ES
+### Setup
 
-Freshcom uses [commanded](https://github.com/commanded/commanded) and is implemented following the [CQRS/ES](http://cqrs.nu/Faq) pattern. This allows freshcom to take more advantage of OTP and make it much easier to be extended by developers. However, to extend freshcom you do not need to fully understand CQRS/ES, you just need to know that freshcom emits many events in its lifecycle and you can simply act on those event to extend the functionalities.
+#### 1. Install Mix Depedencies
+
+```
+$ git clone https://github.com/freshcom/freshcom
+$ cd freshcom
+$ mix deps.get
+```
+
+#### 2. Set Environment Variables
+
+Once all the mix dependencies are installed we need to config the environment variables. Please copy paste `.env.example` and rename it to `.env` add in all the relevant environment variables. Then run `source .env` to set all the variables.
+
+#### 3. Setup Database
+
+Setup the database with `mix freshcom.setup` which will do the following for you:
+
+- Create the projection (read side) database and run all the relevant migrations
+- Create and initialize the eventstore (write side) database
+
+### Run
+
+Once you have everything setup you can get into iex with `iex -S mix` and try calling functions on the top level modules to see if things works properly. For example to create a user:
+
+```elixir
+req = %Request{
+  fields: %{
+    "name" => "Demo User",
+    "username" => "test@example.com",
+    "email" => "test@example.com",
+    "password" => "test1234",
+    "is_term_accepted" => true
+  },
+  _role_: "system"
+}
+
+{:ok, %{data: user}} = Freshcom.Identity.register_user(req)
+```
+
+## Roadmap
+
+### Base
+
+- [x] Filter
+- [x] Include
+- [x] Pagination
+- [x] I18N
+- [x] Search
+- [x] Sort
+- [x] Store
+- [x] Validation
 
 ### Services
 
-Freshcom is built using loosely coupled services where each service is an OTP application. If you do not need to use the complete feature of Freshcom or if some feature does not fit your need, you can simply cherry pick the services you need and build the rest on your own.
+- [x] Identity (Completed)
+- [ ] Goods (In Progress) (30%)
+- [ ] Inventory
+- [ ] Catalogue
+- [ ] CRM
+- [ ] Finance
+- [ ] Storefront
+- [ ] Fulfillment
+- [ ] Notification
 
-### I18n
+## Learn more
 
-Freshcom provides native support for I18n, each resource can have its attributes saved in unlimited number of locales. You can also easily search against different locales.
+  * Documentation: http://www.comingsoon.io/
 
-### Multi-tenant
+## Contact
 
-Freshcom provide native support for multi-tenant where standard user can create and own multiple accounts (similar to Stripe).
-
-### Test mode
-
-Freshcom provides native support for test mode (similar Stripe). This means you can have test data to run against payment gateway using test mode without effecting your live store or running a different instance.
-
-### Email Templating
-
-Freshcom provides native support for email templating. This means you can customize your email template without redeployment, and each account can have different email template. If you implement a proper front-end you can allow non-developer to easily customize the email for their store.
-
-## Example Usage
-The example below serve as a reference to what will be available when freshcom reaches beta. 
-
-```elixir
-alias Freshcom.Request
-alias Freshcom.{Identity, Goods, Catalogue, Storefront}
-
-# Register a user
-{:ok, response} = Identity.register_user(%Request{
-  fields: %{
-    username: "rbao",
-    email: "test@example.com"
-    password: "test1234",
-    name: "Roy"
-  }
-})
-
-user_id = response.data.id
-account_id = response.data.default_account_id
-
-# Add a stockable
-{:ok, response} = Goods.add_stockable(%Request{
-  requester: %{id: user_id, account_id: account_id},
-  fields: %{
-    name: "Warp Drive",
-    unit_of_measure: "EA"
-  }
-})
-
-stockable_id = response.data.id
-
-# Add a product
-{:ok, response} = Catalogue.add_product(%Request{
-  requester: %{id: user_id, account_id: account_id},
-  fields: %{
-    type: "simple",
-    goods_id: stockable_id,
-    goods_type: "Stockable",
-    prices: [
-      %{
-        name: "Regular Price",
-        charge_amount_cents: 500000000000,
-        charge_unit: "EA"
-      }
-    ]
-  }
-})
-
-product_id = response.data.id
-
-# Setup a cart
-{:ok, response} = Storefront.get_empty_cart(%Request{
-  requester: %{id: user_id, account_id: account_id}
-})
-
-cart_id = response.data.id
-
-# Add product to a cart
-{:ok, response} = Storefront.add_item_to_cart(%Request{
-  requester: %{id: user_id, account_id: account_id},
-  identifiers: %{id: cart_id},
-  fields: %{
-    product_id: product_id,
-    quantity: 2
-  }
-})
-
-# Checkout a cart
-{:ok, response} = Storefront.checkout(%Request{
-  requester: %{id: user_id, account_id: account_id},
-  identifiers: %{id: cart.id},
-  fields: %{
-    name: "Roy Bao",
-    payment_gateway: "freshcom",
-    payment_source: "stripetoken",
-    capture_payment: true
-  }
-})
-
-order_id = response.data.id
-```
-
-Note the API function name do not follow a CRUD style naming (i.e `create_cart`, `create_line_item`... etc), here we just want to use the domain language. You don't create a cart when you are shopping, you get an empty cart to start shopping.
+Any question or feedback feel free to find me in the Elixir Slack Channel @rbao, will usually respond within few hours in PST timezone day time.

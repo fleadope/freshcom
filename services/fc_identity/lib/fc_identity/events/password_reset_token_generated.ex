@@ -1,11 +1,13 @@
 defmodule FCIdentity.PasswordResetTokenGenerated do
   use TypedStruct
 
+  @derive Jason.Encoder
   @version 1
 
   typedstruct do
     field :__version__, integer(), default: @version
 
+    field :request_id, String.t()
     field :requester_id, String.t()
     field :requester_type, String.t()
     field :requester_role, String.t()
@@ -15,6 +17,7 @@ defmodule FCIdentity.PasswordResetTokenGenerated do
 
     field :user_id, String.t()
     field :token, String.t()
-    field :expires_at, String.t() # IS8601 Format
+    # IS8601 Format
+    field :expires_at, String.t()
   end
 end

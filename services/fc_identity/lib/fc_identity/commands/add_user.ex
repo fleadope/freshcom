@@ -5,6 +5,7 @@ defmodule FCIdentity.AddUser do
   alias FCIdentity.CommandValidator
 
   typedstruct do
+    field :request_id, String.t()
     field :requester_id, String.t()
     field :requester_type, String.t()
     field :requester_role, String.t()
@@ -13,7 +14,6 @@ defmodule FCIdentity.AddUser do
     field :account_id, String.t()
 
     field :user_id, String.t()
-    field :status, String.t(), default: "active"
     field :username, String.t()
     field :password, String.t()
     field :email, String.t()
@@ -25,8 +25,6 @@ defmodule FCIdentity.AddUser do
 
     field :role, String.t()
   end
-
-  @valid_statuses ["pending", "active"]
 
   @valid_roles [
     "owner",
@@ -42,7 +40,6 @@ defmodule FCIdentity.AddUser do
 
   validates :account_id, presence: true, uuid: true
 
-  validates :status, presence: true, inclusion: @valid_statuses
   validates :username, presence: true, by: &CommandValidator.username/2
   validates :password, presence: true, length: [min: 8]
   validates :email, by: &CommandValidator.email/2

@@ -11,6 +11,7 @@ defmodule FCIdentity.UserHandler do
   import FCIdentity.UserPolicy
 
   alias FCIdentity.UsernameStore
+
   alias FCIdentity.{
     RegisterUser,
     AddUser,
@@ -19,9 +20,11 @@ defmodule FCIdentity.UserHandler do
     ChangePassword,
     ChangeUserRole,
     UpdateUserInfo,
+    ChangeDefaultAccount,
     GenerateEmailVerificationToken,
     VerifyEmail
   }
+
   alias FCIdentity.{
     UserAdded,
     UserRegistered,
@@ -30,6 +33,7 @@ defmodule FCIdentity.UserHandler do
     PasswordChanged,
     UserRoleChanged,
     UserInfoUpdated,
+    DefaultAccountChanged,
     EmailVerificationTokenGenerated,
     EmailVerified
   }
@@ -40,10 +44,11 @@ defmodule FCIdentity.UserHandler do
       status: "active",
       role: "owner"
     }
+
     evt_generated = %EmailVerificationTokenGenerated{
       user_id: cmd.user_id,
       token: uuid4(),
-      expires_at: to_utc_iso8601(Timex.shift(Timex.now, hours: 24))
+      expires_at: to_utc_iso8601(Timex.shift(Timex.now(), hours: 24))
     }
 
     cmd
@@ -90,7 +95,8 @@ defmodule FCIdentity.UserHandler do
           expires_at: to_utc_iso8601(cmd.expires_at)
         }
 
-      other -> other
+      other ->
+        other
     end
   end
 
@@ -105,33 +111,51 @@ defmodule FCIdentity.UserHandler do
 
   def handle(state, %VerifyEmail{} = cmd) do
     cmd
-    |>  authorize(state)
+    |> authorize(state)
     ~>> validate_verification_token(state)
-    ~>  merge_to(%EmailVerified{})
-    |>  unwrap_ok()
+    ~> merge_to(%EmailVerified{})
+    |> unwrap_ok()
   end
 
   def handle(state, %ChangePassword{} = cmd) do
     cmd
-    |>  authorize(state)
+    |> authorize(state)
     ~>> validate_current_password(state)
     ~>> validate_reset_token(state)
-    ~>  merge_to(%PasswordChanged{new_password_hash: hashpwsalt(cmd.new_password)})
-    |>  unwrap_ok()
+    ~> merge_to(%PasswordChanged{
+      new_password_hash: hashpwsalt(cmd.new_password),
+      original_password_hash: state.password_hash
+    })
+    |> unwrap_ok()
   end
 
   def handle(state, %ChangeUserRole{} = cmd) do
     cmd
     |> authorize(state)
-    ~> merge_to(%UserRoleChanged{})
+    ~> merge_to(%UserRoleChanged{original_role: state.role})
     |> unwrap_ok()
   end
 
   def handle(state, %UpdateUserInfo{} = cmd) do
+    default_locale = FCStateStorage.GlobalStore.DefaultLocaleStore.get(state.account_id)
+    translatable_fields = FCIdentity.User.translatable_fields()
+
     cmd
     |> authorize(state)
     ~> keep_username(state)
     ~> merge_to(%UserInfoUpdated{})
+    ~> put_translations(state, translatable_fields, default_locale)
+    ~> put_original_fields(state)
+    |> unwrap_ok()
+  end
+
+  def handle(state, %ChangeDefaultAccount{} = cmd) do
+    cmd
+    |> authorize(state)
+    ~> merge_to(%DefaultAccountChanged{
+      default_account_id: cmd.account_id,
+      original_default_account_id: state.default_account_id
+    })
     |> unwrap_ok()
   end
 
@@ -191,7 +215,8 @@ defmodule FCIdentity.UserHandler do
     reset_token == state.password_reset_token && Timex.before?(Timex.now(), state.password_reset_token_expires_at)
   end
 
-  defp validate_verification_token(%{verification_token: verification_token} = cmd, state) when is_binary(verification_token) do
+  defp validate_verification_token(%{verification_token: verification_token} = cmd, state)
+       when is_binary(verification_token) do
     cond do
       is_verification_token_valid?(verification_token, state) ->
         {:ok, cmd}
@@ -207,6 +232,7 @@ defmodule FCIdentity.UserHandler do
   defp validate_verification_token(cmd, _), do: {:ok, cmd}
 
   defp is_verification_token_valid?(verification_token, state) do
-    verification_token == state.email_verification_token && Timex.before?(Timex.now(), state.password_reset_token_expires_at)
+    verification_token == state.email_verification_token &&
+      Timex.before?(Timex.now(), state.password_reset_token_expires_at)
   end
 end

@@ -17,23 +17,29 @@ defmodule Freshcom.User do
     field :role, :string
 
     field :password_reset_token, :string
-    field :password_reset_token_expires_at, :naive_datetime
+    field :password_reset_token_expires_at, :naive_datetime_usec
+    field :password_changed_at, :naive_datetime_usec
 
     field :email_verified, :boolean
     field :email_verification_token, :string
-    field :email_verification_token_expires_at, :naive_datetime
+    field :email_verification_token_expires_at, :naive_datetime_usec
+    field :email_verified_at, :naive_datetime_usec
 
-    field :custom_data, :map, default: %{}
-    field :translations, :map, default: %{}
+    field :custom_data, :map
+    field :translations, :map
 
     timestamps()
 
     belongs_to :account, Account
     belongs_to :default_account, Account
-    has_many :refresh_tokens, Freshcom.RefreshToken
+    has_many :api_keys, Freshcom.APIKey
   end
 
   @type t :: Ecto.Schema.t()
+
+  def translatable_fields do
+    FCIdentity.User.translatable_fields()
+  end
 
   @spec is_password_valid?(__MODULE__.t(), String.t()) :: boolean
   def is_password_valid?(user, password) do

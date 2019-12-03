@@ -1,49 +1,50 @@
 defmodule Freshcom.IdentityPolicy do
+  @moduledoc false
 
-  @admins ["owner", "administrator"]
-  @developers @admins ++ ["developer"]
-  @operators @admins ++ [
-    "developer",
-    "manager",
-    "marketing_specialist",
-    "goods_specialist",
-    "support_specialist",
-    "read_only"
-  ]
-  @guests @operators ++ @admins ++ ["guest"]
+  use Freshcom, :policy
 
-  def authorize(%{_role_: "sysdev"} = req, _), do: {:ok, req}
-  def authorize(%{_role_: "system"} = req, _), do: {:ok, req}
-  def authorize(%{_role_: "appdev"} = req, _), do: {:ok, req}
-  def authorize(%{_client_: nil}, _), do: {:error, :access_denied}
-
-  def authorize(%{_role_: role} = req, :list_user) when role in @admins do
-    req = %{req | _searchable_fields_: ["name", "username", "email"]}
+  def authorize(%{_role_: role} = req, :list_user) when role in @admin_roles do
     {:ok, req}
   end
 
-  def authorize(%{requester_id: rid, identifiers: %{"id" => tid}} = req, :get_user) when rid == tid,
-    do: {:ok, req}
+  def authorize(req, :get_user) do
+    cond do
+      req.requester_id && req.requester_id == req.identifier["id"] ->
+        {:ok, req}
 
-  def authorize(%{_role_: role} = req, :get_user) when role in @admins,
-    do: {:ok, req}
+      req._role_ in @admin_roles ->
+        {:ok, req}
 
-  def authorize(%{_requester_: %{type: "standard"}, _client_: %{type: "system"}} = req, :list_account),
-    do: {:ok, req}
-
-  def authorize(%{_role_: role} = req, :get_account) when role in @guests,
-    do: {:ok, req}
-
-  def authorize(%{_client_: %{type: "system"}} = req, :exchange_refresh_token),
-    do: {:ok, req}
-
-  def authorize(%{_role_: role, _client_: %{type: "system"}} = req, :get_refresh_token) when role in @developers do
-    req = Map.put(req, :identifiers, %{"account_id" => req.account_id, "user_id" => nil})
-    {:ok, req}
+      true ->
+        {:error, :access_denied}
+    end
   end
 
-  def authorize(%{_role_: role, _client_: %{type: "system"}} = req, :list_app) when role in @developers,
+  def authorize(
+        %{_requester_: %{type: "standard"}, _client_: %{type: "system"}} = req,
+        :list_account
+      ),
+      do: {:ok, req}
+
+  def authorize(%{_role_: role} = req, :get_account) when role in @guest_roles,
     do: {:ok, req}
+
+  def authorize(%{_client_: %{type: "system"}} = req, :exchange_api_key),
+    do: {:ok, req}
+
+  def authorize(req, :get_api_key) do
+    cond do
+      req.requester_id && req.requester_id == req.identifier["user_id"] ->
+        {:ok, req}
+
+      req._role_ in @dev_roles ->
+        {:ok, req}
+    end
+  end
+
+  def authorize(%{_role_: role, _client_: %{type: "system"}} = req, :list_app)
+      when role in @dev_roles,
+      do: {:ok, req}
 
   def authorize(_, _), do: {:error, :access_denied}
 end

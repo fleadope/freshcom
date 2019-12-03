@@ -1,11 +1,13 @@
 defmodule FCIdentity.UserInfoUpdated do
   use TypedStruct
 
+  @derive Jason.Encoder
   @version 1
 
   typedstruct do
     field :__version__, integer(), default: @version
 
+    field :request_id, String.t()
     field :requester_id, String.t()
     field :requester_type, String.t()
     field :requester_role, String.t()
@@ -14,6 +16,7 @@ defmodule FCIdentity.UserInfoUpdated do
     field :account_id, String.t()
 
     field :effective_keys, [String.t()]
+    field :original_fields, map()
     field :locale, String.t()
 
     field :user_id, String.t()
@@ -26,5 +29,6 @@ defmodule FCIdentity.UserInfoUpdated do
     field :name, String.t()
 
     field :custom_data, map
+    field :translations, map
   end
 end

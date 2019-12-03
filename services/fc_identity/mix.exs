@@ -7,7 +7,7 @@ defmodule FCIdentity.MixProject do
       name: "Freshcom Identity",
       version: "0.1.0",
       elixir: "~> 1.7",
-      elixirc_paths: elixirc_paths(Mix.env),
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       docs: docs()
@@ -32,8 +32,6 @@ defmodule FCIdentity.MixProject do
   defp deps do
     [
       {:fc_base, path: "../../base/fc_base"},
-      {:commanded, "~> 0.17"},
-      {:hackney, "~> 1.9"},
       {:comeonin, "~> 4.0"},
       {:argon2_elixir, "~> 1.3"},
       {:faker, "~> 0.11", only: [:test, :dev]},
@@ -53,8 +51,9 @@ defmodule FCIdentity.MixProject do
 
   defp groups_for_modules do
     [
-      "Commands": [
+      Commands: [
         FCIdentity.AddUser,
+        FCIdentity.ChangeDefaultAccount,
         FCIdentity.ChangePassword,
         FCIdentity.ChangeUserRole,
         FCIdentity.DeleteUser,
@@ -63,12 +62,16 @@ defmodule FCIdentity.MixProject do
         FCIdentity.RegisterUser,
         FCIdentity.UpdateUserInfo,
         FCIdentity.VerifyEmail,
-
         FCIdentity.CreateAccount,
-        FCIdentity.UpdateAccountInfo
+        FCIdentity.ChangeAccountSystemLabel,
+        FCIdentity.CloseAccount,
+        FCIdentity.UpdateAccountInfo,
+        FCIdentity.AddApp,
+        FCIdentity.DeleteApp,
+        FCIdentity.UpdateApp
       ],
-
-      "Events": [
+      Events: [
+        FCIdentity.DefaultAccountChanged,
         FCIdentity.EmailVerificationTokenGenerated,
         FCIdentity.EmailVerified,
         FCIdentity.PasswordChanged,
@@ -79,13 +82,18 @@ defmodule FCIdentity.MixProject do
         FCIdentity.UserRegistered,
         FCIdentity.UserRegistrationRequested,
         FCIdentity.UserRoleChanged,
-
         FCIdentity.AccountCreated,
+        FCIdentity.AccountClosed,
         FCIdentity.AccountInfoUpdated,
+        FCIdentity.AccountSystemLabelChanged,
+        FCIdentity.AppAdded,
+        FCIdentity.AppDeleted,
+        FCIdentity.AppUpdated
       ],
-
-      "Stores": [
-        FCIdentity.UsernameStore
+      Stores: [
+        FCIdentity.UsernameStore,
+        FCIdentity.AccountHandleStore,
+        FCIdentity.TestAccountIdStore
       ]
     ]
   end

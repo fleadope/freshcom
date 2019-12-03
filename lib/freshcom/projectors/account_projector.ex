@@ -4,11 +4,14 @@ defmodule Freshcom.AccountProjector do
   use Freshcom.Projector
   use Commanded.Projections.Ecto, name: "projector:b1c31ad3-44f9-43ce-a715-3b9da1926992"
 
-  alias Freshcom.Repo
+  alias Ecto.Changeset
   alias Freshcom.Account
+
   alias FCIdentity.{
     AccountCreated,
-    AccountInfoUpdated
+    AccountInfoUpdated,
+    AccountSystemLabelChanged,
+    AccountClosed
   }
 
   project(%AccountCreated{} = event, _metadata) do
@@ -21,6 +24,24 @@ defmodule Freshcom.AccountProjector do
       Account
       |> Repo.get(event.account_id)
       |> Projection.changeset(event)
+
+    Multi.update(multi, :account, changeset)
+  end
+
+  project(%AccountClosed{} = event, _) do
+    changeset =
+      Account
+      |> Repo.get(event.account_id)
+      |> Changeset.change(status: "closed", handle: event.handle)
+
+    Multi.update(multi, :account, changeset)
+  end
+
+  project(%AccountSystemLabelChanged{} = event, _) do
+    changeset =
+      Account
+      |> Repo.get(event.account_id)
+      |> Changeset.change(system_label: event.system_label)
 
     Multi.update(multi, :account, changeset)
   end
